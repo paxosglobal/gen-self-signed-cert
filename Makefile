@@ -18,7 +18,7 @@ out/windows: main.go
 RELEASE_BASE := out/release/$(NAME)_v$(RELEASE_VERSION)
 RELEASES := $(foreach os,$(OS_TARGETS),$(RELEASE_BASE)_$(os)_amd64.zip)
 $(RELEASES): $(RELEASE_BASE)_%_amd64.zip : out/%
-	mkdir -p out/release && zip -r $@ out/$*
+	mkdir -p out/release && zip $@ out/$*/*
 
 .PHONY: release
 release: $(RELEASES)

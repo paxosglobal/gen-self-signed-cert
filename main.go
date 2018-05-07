@@ -52,9 +52,12 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println("CA cert and host certificate generated!")
-	fmt.Println("CA certificate file:    ca.crt")
-	fmt.Println("Host certificate file:  host.crt")
-	fmt.Println("Host key file:          host.key")
+	fmt.Printf("CA certificate file:    %s\n",
+		filepath.Join(*outDir, "ca.crt"))
+	fmt.Printf("Host certificate file:  %s\n",
+		filepath.Join(*outDir, "host.crt"))
+	fmt.Printf("Host key file:          %s\n",
+		filepath.Join(*outDir, "host.key"))
 }
 
 func generateCerts(host, outDir, keyPass string) error {
