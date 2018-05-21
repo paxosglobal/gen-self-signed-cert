@@ -58,6 +58,8 @@ func main() {
 		filepath.Join(*outDir, "host.crt"))
 	fmt.Printf("Host key file:          %s\n",
 		filepath.Join(*outDir, "host.key"))
+	fmt.Printf("Host pem file:          %s\n",
+		filepath.Join(*outDir, "host.pem"))
 }
 
 func generateCerts(host, outDir, keyPass string) error {
@@ -78,6 +80,9 @@ func generateCerts(host, outDir, keyPass string) error {
 	if err := writeKeyPem(outDir, "host", hostCert, keyPass); err != nil {
 		return fmt.Errorf("error writing host plaintextKey: %s", err)
 	}
+	if err := writeClientPem(outDir, "host", hostCert, keyPass); err != nil {
+		return fmt.Errorf("error writing host pem: %s", err)
+	}
 	return nil
 }
 
@@ -85,6 +90,43 @@ type certData struct {
 	cert       *x509.Certificate
 	certBytes  []byte
 	privateKey *rsa.PrivateKey
+}
+
+func writeClientPem(dir, basename string, data *certData, password string) (err error) {
+	bytes := x509.MarshalPKCS1PrivateKey(data.privateKey)
+	var pemBlock *pem.Block
+	if password != "" {
+		pemBlock, err = x509.EncryptPEMBlock(
+			rand.Reader,
+			"RSA PRIVATE KEY",
+			bytes,
+			[]byte(password),
+			x509.PEMCipherAES256)
+		if err != nil {
+			return err
+		}
+	} else {
+		pemBlock = &pem.Block{Type: "RSA PRIVATE KEY", Bytes: bytes}
+	}
+
+	file := filepath.Join(dir, basename+".pem")
+	// TODO: Permissions on key file.
+	writer, err := os.Create(file)
+	if err != nil {
+		return err
+	}
+
+	err = pem.Encode(writer, pemBlock)
+	if err != nil {
+		return err
+	}
+
+	err = pem.Encode(writer, &pem.Block{Type: "CERTIFICATE", Bytes: data.certBytes})
+	if err != nil {
+		return err
+	}
+
+	return writer.Close()
 }
 
 func writeKeyPem(dir, basename string, data *certData, password string) (err error) {
