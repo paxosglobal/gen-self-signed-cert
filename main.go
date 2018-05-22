@@ -52,13 +52,13 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println("CA cert and host certificate generated!")
-	fmt.Printf("CA certificate file:    %s\n",
+	fmt.Printf("CA certificate file:        %s\n",
 		filepath.Join(*outDir, "ca.crt"))
-	fmt.Printf("Host certificate file:  %s\n",
+	fmt.Printf("Host certificate file:      %s\n",
 		filepath.Join(*outDir, "host.crt"))
-	fmt.Printf("Host key file:          %s\n",
+	fmt.Printf("Host key file:              %s\n",
 		filepath.Join(*outDir, "host.key"))
-	fmt.Printf("Host pem file:          %s\n",
+	fmt.Printf("Host pem file (cert + key): %s\n",
 		filepath.Join(*outDir, "host.pem"))
 }
 
