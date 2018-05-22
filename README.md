@@ -27,14 +27,12 @@ Commands below are for OSX/Linux; for Windows use `gen-self-signed-cert.exe`.
        ```bash
        curl --cacert ca.crt https://myhost.example.com
        ```
-3. use `host.pem` or (`host.crt` and `host.key`) to authenticate itself.
+3. Use `host.pem` (or `host.crt` and `host.key`) to authenticate itself.
 
-   - For a curl client performing client certificate authentication with pem, these would be the `--cert` 
+   - For a curl client performing client certificate authentication with pem, these would be the `--cert` (or `--cert` and `--key`)
        ```bash
        curl --cert host.pem host.key https://some.server.com
-       ```
-   - For a curl client performing client certificate authentication, these would be the `--cert` `--key`
-       ```bash
+       # Or, alternatively:
        curl --cert host.crt --key host.key https://some.server.com
        ```
    - For a [HAProxy server terminating TLS](https://serversforhackers.com/c/using-ssl-certificates-with-haproxy), `host.pem` is `ssl crt /etc/ssl/xip.io/xip.io.pem` file.
