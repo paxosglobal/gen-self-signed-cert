@@ -62,6 +62,16 @@ func main() {
 		filepath.Join(*outDir, "host.pem"))
 }
 
+func fileCreate(dir, filename string) (*os.File, error) {
+	file := filepath.Join(dir, filename)
+	writer, err := os.Create(file)
+	if err != nil {
+		return nil, fmt.Errorf("error creating file %s: %s", file, err)
+	}
+
+	return writer, nil
+}
+
 func generateCerts(host, outDir, keyPass string) error {
 	caCert, err := createCertificate(host, nil)
 	if err != nil {
@@ -71,18 +81,42 @@ func generateCerts(host, outDir, keyPass string) error {
 	if err != nil {
 		return fmt.Errorf("error creating host cert: %s", err)
 	}
-	if err := writeCertPem(outDir, "ca", caCert); err != nil {
-		return fmt.Errorf("error writing CA cert: %s", err)
+
+	writer, err := fileCreate(outDir, "ca.crt")
+	if err := writeCertPem(writer, caCert); err != nil {
+		return err
 	}
-	if err := writeCertPem(outDir, "host", hostCert); err != nil {
-		return fmt.Errorf("error writing host cert: %s", err)
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("error writing ca: %s", err)
 	}
-	if err := writeKeyPem(outDir, "host", hostCert, keyPass); err != nil {
+
+	writer, err = fileCreate(outDir, "host.crt")
+	if err = writeCertPem(writer, hostCert); err != nil {
+		return err
+	}
+	if err = writer.Close(); err != nil {
+		return fmt.Errorf("error writing host.crt: %s", err)
+	}
+
+	writer, err = fileCreate(outDir, "host.key")
+	if err := writeKeyPem(writer, hostCert, keyPass); err != nil {
+		return err
+	}
+	if err := writer.Close(); err != nil {
 		return fmt.Errorf("error writing host plaintextKey: %s", err)
 	}
-	if err := writeClientPem(outDir, "host", hostCert, keyPass); err != nil {
+
+	writer, err = fileCreate(outDir, "host.pem")
+	if err := writeKeyPem(writer, hostCert, keyPass); err != nil {
+		return err
+	}
+	if err := writeCertPem(writer, hostCert); err != nil {
+		return err
+	}
+	if err := writer.Close(); err != nil {
 		return fmt.Errorf("error writing host pem: %s", err)
 	}
+
 	return nil
 }
 
@@ -92,9 +126,10 @@ type certData struct {
 	privateKey *rsa.PrivateKey
 }
 
-func writeClientPem(dir, basename string, data *certData, password string) (err error) {
+func writeKeyPem(writer *os.File, data *certData, password string) error {
 	bytes := x509.MarshalPKCS1PrivateKey(data.privateKey)
 	var pemBlock *pem.Block
+	var err error
 	if password != "" {
 		pemBlock, err = x509.EncryptPEMBlock(
 			rand.Reader,
@@ -109,68 +144,19 @@ func writeClientPem(dir, basename string, data *certData, password string) (err 
 		pemBlock = &pem.Block{Type: "RSA PRIVATE KEY", Bytes: bytes}
 	}
 
-	file := filepath.Join(dir, basename+".pem")
-	// TODO: Permissions on key file.
-	writer, err := os.Create(file)
-	if err != nil {
-		return err
-	}
-
 	err = pem.Encode(writer, pemBlock)
 	if err != nil {
 		return err
 	}
-
-	err = pem.Encode(writer, &pem.Block{Type: "CERTIFICATE", Bytes: data.certBytes})
-	if err != nil {
-		return err
-	}
-
-	return writer.Close()
+	return nil
 }
 
-func writeKeyPem(dir, basename string, data *certData, password string) (err error) {
-	bytes := x509.MarshalPKCS1PrivateKey(data.privateKey)
-	var pemBlock *pem.Block
-	if password != "" {
-		pemBlock, err = x509.EncryptPEMBlock(
-			rand.Reader,
-			"RSA PRIVATE KEY",
-			bytes,
-			[]byte(password),
-			x509.PEMCipherAES256)
-		if err != nil {
-			return err
-		}
-	} else {
-		pemBlock = &pem.Block{Type: "RSA PRIVATE KEY", Bytes: bytes}
-	}
-
-	file := filepath.Join(dir, basename+".key")
-
-	// TODO: Permissions on key file.
-	writer, err := os.Create(file)
+func writeCertPem(writer *os.File, data *certData) error {
+	err := pem.Encode(writer, &pem.Block{Type: "CERTIFICATE", Bytes: data.certBytes})
 	if err != nil {
 		return err
 	}
-	err = pem.Encode(writer, pemBlock)
-	if err != nil {
-		return err
-	}
-	return writer.Close()
-}
-
-func writeCertPem(dir, basename string, data *certData) error {
-	file := filepath.Join(dir, basename+".crt")
-	writer, err := os.Create(file)
-	if err != nil {
-		return err
-	}
-	err = pem.Encode(writer, &pem.Block{Type: "CERTIFICATE", Bytes: data.certBytes})
-	if err != nil {
-		return err
-	}
-	return writer.Close()
+	return nil
 }
 
 func createCertificate(host string, parent *certData) (*certData, error) {
