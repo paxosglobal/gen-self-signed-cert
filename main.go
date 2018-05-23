@@ -83,38 +83,31 @@ func generateCerts(host, outDir, keyPass string) error {
 	}
 
 	writer, err := fileCreate(outDir, "ca.crt")
+	defer writer.Close()
 	if err := writeCertPem(writer, caCert); err != nil {
 		return err
 	}
-	if err := writer.Close(); err != nil {
-		return fmt.Errorf("error writing ca: %s", err)
-	}
 
 	writer, err = fileCreate(outDir, "host.crt")
+	defer writer.Close()
 	if err = writeCertPem(writer, hostCert); err != nil {
 		return err
 	}
-	if err = writer.Close(); err != nil {
-		return fmt.Errorf("error writing host.crt: %s", err)
-	}
 
 	writer, err = fileCreate(outDir, "host.key")
+	defer writer.Close()
 	if err := writeKeyPem(writer, hostCert, keyPass); err != nil {
 		return err
 	}
-	if err := writer.Close(); err != nil {
-		return fmt.Errorf("error writing host plaintextKey: %s", err)
-	}
 
+	// Concat host.crt and host.key
 	writer, err = fileCreate(outDir, "host.pem")
+	defer writer.Close()
 	if err := writeKeyPem(writer, hostCert, keyPass); err != nil {
 		return err
 	}
 	if err := writeCertPem(writer, hostCert); err != nil {
 		return err
-	}
-	if err := writer.Close(); err != nil {
-		return fmt.Errorf("error writing host pem: %s", err)
 	}
 
 	return nil
@@ -148,7 +141,7 @@ func writeKeyPem(writer *os.File, data *certData, password string) error {
 	if err != nil {
 		return err
 	}
-	return nil
+	return writer.Sync()
 }
 
 func writeCertPem(writer *os.File, data *certData) error {
